@@ -1,5 +1,5 @@
 // tail.c
-// Solution IJC-DU2, Task A, 28.3.2024
+// Solution IJC-DU2, Task A, 29.3.2024
 // Author: Michal Repčík, FIT
 // Compiled: gcc 11.4.0
 
@@ -10,91 +10,93 @@
 #define MAX_LINE_LEN 2047
 #define DEFAULT_LEN 10
 
-typedef struct {
+typedef struct c_buf {
     char **buffer;
     unsigned size;
     unsigned head;
     unsigned tail;
-} CBuf;
+} c_buf_t;
 
-// Function that allocates memory for buffer inside CBuf
-void cbuf_create(CBuf *cbuf, unsigned length) {
+// Function that allocates memory for buffer inside c_buf
+void c_buf_create(c_buf_t *c_buf, unsigned length) {
     // Alocate memory for buffer
-    cbuf->buffer = (char**)malloc(length*sizeof(char*));
+    c_buf->buffer = (char**)malloc(length*sizeof(char*));
 
-    if (cbuf->buffer == NULL) {
+    if (c_buf->buffer == NULL) {
         fprintf(stderr, "Memory allocation for buffer failed\n");
         exit(EXIT_FAILURE);
     }
     // Alocate memory for buffer cells
     for (unsigned i = 0; i < length; i++) {
-        cbuf->buffer[i] = (char*)malloc(MAX_LINE_LEN*sizeof(char));
+        // Allocate one extra space for /0
+        c_buf->buffer[i] = (char*)malloc((MAX_LINE_LEN + 1)*sizeof(char));
 
-        if (cbuf->buffer[i] == NULL) {
+        if (c_buf->buffer[i] == NULL) {
             fprintf(stderr, "Memory allocation for line %u failed\n", i);
             for (unsigned j = 0; j < i; j++) {
-                free(cbuf->buffer[j]);
+                free(c_buf->buffer[j]);
             }
-            free(cbuf->buffer);
+            free(c_buf->buffer);
             exit(EXIT_FAILURE);
         }
         // Initialize buffer with \0 for printf compatibility
-        memset(cbuf->buffer[i], '\0', MAX_LINE_LEN);
+        memset(c_buf->buffer[i], '\0', MAX_LINE_LEN);
     }
 
-    cbuf->size = length;
-    cbuf->head = 0;
-    cbuf->tail = 0;
+    c_buf->size = length;
+    c_buf->head = 0;
+    c_buf->tail = 0;
 }
 
-// Function that frees allocated memory for CBuf
-void cbuf_free(CBuf *cbuf) {
-    for (unsigned i = 0; i < cbuf->size; i++) {
-        if (cbuf->buffer[i] != NULL) {
-            free(cbuf->buffer[i]);
+// Function that frees allocated memory for c_buf
+void c_buf_free(c_buf_t *c_buf) {
+    for (unsigned i = 0; i < c_buf->size; i++) {
+        if (c_buf->buffer[i] != NULL) {
+            free(c_buf->buffer[i]);
         }
     }
-    free(cbuf->buffer);
+    free(c_buf->buffer);
 }
 
 // Function that adds line to the buffer
-void cbuf_put(CBuf *cbuf, char *line) {
-    strcpy(cbuf->buffer[cbuf->head], line);
+void c_buf_put(c_buf_t *c_buf, char *line) {
+    strcpy(c_buf->buffer[c_buf->head], line);
     // Increment head and create circular behavior
-    cbuf->head = (cbuf->head + 1) % cbuf->size;
+    c_buf->head = (c_buf->head + 1) % c_buf->size;
 }
 
 // Function that returns line from the buffer
-char* cbuf_get(CBuf *cbuf) {
-    if (cbuf->head == cbuf->tail) {
+char* c_buf_get(c_buf_t *c_buf) {
+    if (c_buf->head == c_buf->tail) {
         printf("Buffer is empty\n");
         return NULL;
     }
     
-    char *line = cbuf->buffer[cbuf->tail];
-    cbuf->tail = (cbuf->tail + 1) % cbuf->size;
+    char *line = c_buf->buffer[c_buf->tail];
+    c_buf->tail = (c_buf->tail + 1) % c_buf->size;
 
     return line;
 }
 
-// Function that fills CBuf with an input
-void cbuf_fill(CBuf *cbuf, FILE *fp) {
+// Function that fills c_buf with an input
+void c_buf_fill(c_buf_t *c_buf, FILE *fp) {
     int c;
     unsigned i = 0;
     char line[MAX_LINE_LEN];
 
     while ((c = fgetc(fp)) != EOF) {
-        // Leave space for \0 at the end
+        // Leave space for \n at the end
         if (i < MAX_LINE_LEN) {
             line[i] = (char)c;
         }
         else if (i == MAX_LINE_LEN) {
             fprintf(stderr, "Maximum line length exceeded\n");
+            line[i] = '\n';
         }
         i++;
 
         if (c == '\n') {
-            cbuf_put(cbuf, line);
+            c_buf_put(c_buf, line);
             memset(line, 0, sizeof(line));
             i = 0;
         }
@@ -102,17 +104,17 @@ void cbuf_fill(CBuf *cbuf, FILE *fp) {
 
     // Process last line
     if (i > 0) {
-        cbuf_put(cbuf, line);
+        c_buf_put(c_buf, line);
     }
 }
 
 // Function that prints last lines from file
-void cbuf_print(CBuf *cbuf) {
-    unsigned index = cbuf->head;
+void c_buf_print(c_buf_t *c_buf) {
+    unsigned index = c_buf->head;
 
-    for (unsigned i = 0; i < cbuf->size; i++) {
-        printf("%s", cbuf->buffer[index]);
-        index = (index + 1) % cbuf->size;
+    for (unsigned i = 0; i < c_buf->size; i++) {
+        printf("%s", c_buf->buffer[index]);
+        index = (index + 1) % c_buf->size;
     }
 }
 
@@ -165,11 +167,11 @@ int main(int argc, char *argv[]) {
     
     fp = process_arguments(argc, argv, &length);
 
-    CBuf cbuf;
-    cbuf_create(&cbuf, length);
-    cbuf_fill(&cbuf, fp);
-    cbuf_print(&cbuf);
-    cbuf_free(&cbuf);
+    c_buf_t c_buf;
+    c_buf_create(&c_buf, length);
+    c_buf_fill(&c_buf, fp);
+    c_buf_print(&c_buf);
+    c_buf_free(&c_buf);
 
     fclose(fp);
     return 0;
