@@ -17,8 +17,10 @@ htab_t *htab_init(const size_t n) {
     htab->size = 0;
     htab->arr_size = n;
 
-    for (size_t i = 0; i < n; i++) {
-        htab->arr[i] = NULL;
+    htab->arr = malloc(n * sizeof(htab_item_t*));
+    if (htab->arr == NULL) {
+        free(htab);
+        return NULL;
     }
 
     return htab;

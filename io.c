@@ -11,7 +11,7 @@
 // Function that reads word from a file and returns its length
 int read_word(char *s, int max, FILE *f) {
     if (max > MAX_LEN) {
-        fprintf(stderr, "Length of the word is out of the limit");
+        fprintf(stderr, "Length of the word is out of the limit.\n");
         max = MAX_LEN;
     }
 
